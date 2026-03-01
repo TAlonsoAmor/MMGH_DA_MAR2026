@@ -1,2 +1,5 @@
-# Ignore all files inside this folder
-.
+# Ignore everything in this folder
+*
+
+# Except this file
+!.gitkeep
