@@ -82,16 +82,75 @@ rutine_MR <- target_pop_rutine %>%
                             TRUE ~ 0)) %>% 
   mutate(demand_total = demand + buffer)
 
-# demand for SIA
+#### demand for SIA
 target_pop_SIA <- dataAll$`2g. U5 pop for SIA` %>% 
   pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "pop_SIA") |>
   mutate(year = as.integer(year))
 
+compute_sia_schedule <- function(df) {
+  df |>
+    arrange(ISO, Country, year) |>
+    group_by(ISO) |>
+    mutate(
+      sia_indicator = {
+        n           <- n()
+        ind         <- integer(n)
+        last_sia    <- 2029L
+        consec_high <- 0L
+        
+        # If already at >=90% in 2030, leave all zeros and skip loop
+        if (cov_mcv2[1] < 0.90) {
+          
+          # Force SIA in 2030 (first year) and start clock there
+          ind[1]   <- 1L
+          last_sia <- year[1]   # anchor to 2030, not 2029
+          
+          for (i in 2:n) {     # start loop from year 2 (2031)
+            
+            if (cov_mcv2[i] >= 0.90) {
+              consec_high <- consec_high + 1L
+            } else {
+              consec_high <- 0L
+            }
+            
+            if (consec_high >= 3L) {
+              break   # all remaining ind stay 0
+            }
+            
+            freq <- case_when(
+              cov_mcv2[i] < 0.60 ~ 2L,
+              cov_mcv2[i] < 0.80 ~ 3L,
+              TRUE               ~ 4L
+            )
+            
+            if ((year[i] - last_sia) >= freq) {
+              ind[i]   <- 1L
+              last_sia <- year[i]
+            }
+          }
+        }
+        
+        ind
+      }
+    ) |>
+    ungroup()
+}
+
 SIA_MR <- target_pop_SIA %>% 
   #get coverage of mcv2 to estimate frequency
-  left_join(cov_rutine_mcv2) %>% 
-  #assume that SIA freq is based on the coverage of 2030
-  mutate(sia_freq = case_when(cov_mcv2 < 0.6 ~ 2,
-                              0.6 <= cov_mcv2 <= 0.8 ~ 3,
-                              0.8 < cov_mcv2 < 0.9 ~ 4.5,
-                              cov_mcv2 > 0.9 ~ 0))
+  left_join(cov_rutine_mcv2)
+  
+freq_SIA <- compute_sia_schedule(SIA_MR) 
+
+demand_SIA <- freq_SIA %>%  
+  left_join(wastage) %>% 
+  # convert rutine wastage to SIA wastage
+  mutate(
+    sia_wastage_multiplier = case_when(
+      wastage == 1.666667 ~ 1.111,   # 10-dose vial
+      wastage == 1.176471 ~ 1.111,   # 5-dose vial
+      wastage == 1.050000 ~ 1.010,   # 1-dose vial
+      TRUE                           ~ 0
+    )
+  ) %>% 
+  mutate(demand = sia_indicator*pop_SIA*sia_wastage_multiplier)
