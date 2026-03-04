@@ -4,6 +4,7 @@ library(readxl)
 library(dplyr)
 library(tidyr)
 library(purrr)
+library(ggplot2)
 
 
 # ---- 1. Helper: load_annex() ------------------------------------------------
@@ -15,8 +16,11 @@ ISO_CORRECTIONS <- tribble(
 )
 
 load_annex <- function(path,
-                       skip           = 2,
-                       exclude_sheets = "TOC") {
+                       skip            = 2,
+                       exclude_sheets  = "TOC",
+                       skip_exceptions = c()) {
+  # skip_exceptions: named vector of sheet-specific skip values
+  # e.g. skip_exceptions = c("3a. % MOV" = 3)
   
   all_sheets  <- excel_sheets(path)
   keep_sheets <- setdiff(all_sheets, exclude_sheets)
@@ -26,11 +30,13 @@ load_annex <- function(path,
   dataAll <- map(
     set_names(keep_sheets),
     ~ {
-      df <- read_excel(path, sheet = .x, skip = skip,
+      # Use sheet-specific skip if defined, otherwise use default
+      sheet_skip <- if (.x %in% names(skip_exceptions)) skip_exceptions[[.x]] else skip
+      
+      df <- read_excel(path, sheet = .x, skip = sheet_skip,
                        col_names = TRUE, .name_repair = "unique") |>
         filter(if_any(everything(), ~ !is.na(.)))
       
-      # ── Apply ISO corrections if both Country and ISO columns exist ────────
       if (all(c("Country", "ISO") %in% names(df))) {
         df <- df |>
           rows_update(ISO_CORRECTIONS, by = "Country", unmatched = "ignore")
@@ -49,7 +55,10 @@ load_annex <- function(path,
 # UPDATE THIS PATH to point to your local copy of annex.xls / annex.xlsx
 ANNEX_PATH <- "./data/Supplemental_Annex.xlsx"   # <-- change as needed
 
-dataAll <- load_annex(ANNEX_PATH)
+dataAll <- load_annex(
+  ANNEX_PATH,
+  skip_exceptions = c("4c. %HTR coverage U2" = 3)   # skipping 3 rows for that particular sheet
+)
 
 
 ######
@@ -208,3 +217,90 @@ mr_map_demand_setp2 <- demand_mr_all %>%
 
 # Total number of PDR for MAP
 sum(mr_map_demand_setp2$MR_PDR_step2)
+
+
+# STEP 3 ------------------------------------------------------------------
+sec_comp <- dataAll$`3b. Sec comp pop` %>% 
+  # remove additional columns that we don´t need
+  select(-(starts_with('202')|starts_with("2019"))) %>% 
+  pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "sec_comp_pop") |>
+  mutate(year = as.integer(year))
+
+rural <- dataAll$`3c. Rural Pop` %>% 
+  pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "rural_pop") |>
+  mutate(year = as.integer(year))
+
+perc_remote_rural <- dataAll$`3d. % remote rural` %>% 
+  pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "percent_remote_rural") |>
+  mutate(year = as.integer(year))
+
+urban_slums <- dataAll$`3e. Slum Pop` %>% 
+  # remove additional columns that we don´t need
+  select(-(starts_with('202')|starts_with("2014"))) %>% 
+  pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "urban_slum_pop") |>
+  mutate(year = as.integer(year))
+
+mov_u2_per <- dataAll$`2d. U2 pop %` %>% 
+  pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "percent_u2") |>
+  mutate(year = as.integer(year))
+
+mov_2_15_per <- dataAll$`2f. 2-15 pop %` %>% 
+  pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "percent_2_15") |>
+  mutate(year = as.integer(year))
+
+htr_coverage_u2 <- dataAll$`4c. %HTR coverage U2` %>%
+  pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "coverage_u2") %>%
+  mutate(year = as.integer(year))
+
+htr_coverage_2_15 <- dataAll$`4d. %HTR Coverage 2-15` %>%
+  pivot_longer(cols = as.character(seq(2030,2040)), names_to = "year", values_to = "coverage_2_15") %>%
+  mutate(year = as.integer(year))
+
+
+target_pop_mov <- sec_comp %>% 
+  left_join(rural) %>% 
+  left_join(perc_remote_rural) %>% 
+  left_join(urban_slums) %>% 
+  left_join(mov_u2_per) %>% 
+  left_join(mov_2_15_per) %>% 
+  left_join(htr_coverage_u2) %>% 
+  left_join(htr_coverage_2_15) %>% 
+  mutate(remote_rural_pop = percent_remote_rural*rural_pop,
+         total_mov_pop = remote_rural_pop + urban_slum_pop + sec_comp_pop,
+         mov_u2_pop = total_mov_pop*percent_u2,
+         mov_2_15_pop = total_mov_pop*percent_2_15)
+  
+add_mr_map_mov <- target_pop_mov %>% 
+  #add SIA schedule for 2_15
+  left_join(freq_SIA) %>% 
+  mutate(mr_map_mov_pre_buffer_u2 = mov_u2_pop*2*coverage_u2*1.010,
+         mr_map_mov_2_15 = mov_2_15_pop*2*coverage_2_15*1.010*sia_indicator) %>% 
+  dplyr::group_by(ISO, Country) %>% 
+  mutate(buffer = case_when(mr_map_mov_pre_buffer_u2 - lag(mr_map_mov_pre_buffer_u2) > 0 ~ 0.25*(mr_map_mov_pre_buffer_u2 - lag(mr_map_mov_pre_buffer_u2)),
+                            TRUE ~ 0)) %>% 
+  mutate(mr_map_mov_u2 = mr_map_mov_pre_buffer_u2+buffer)
+
+# Total MOV doses
+sum(add_mr_map_mov$mr_map_mov_2_15, na.rm = TRUE) + sum(add_mr_map_mov$mr_map_mov_u2, na.rm = TRUE)
+
+
+# PLOTS -------------------------------------------------------------------
+demand_all <- demand_mr_all %>% 
+  select(ISO, Country, `MR MAP Group`, year, demand_rutine_SIA) %>% 
+  left_join(mr_map_demand_setp2  %>% select(ISO, Country, `MR MAP Group`, year, MR_PDR_step2)) %>% 
+  left_join(add_mr_map_mov %>% select(ISO, Country, `MR MAP Group`, year,mr_map_mov_2_15, mr_map_mov_u2)) %>% 
+  mutate(demand_MR_all = MR_PDR_step2 + mr_map_mov_2_15 + mr_map_mov_u2)
+
+
+# plot, all MR
+demand_all %>% 
+  group_by(year) %>% 
+  summarize(doses = sum(demand_rutine_SIA)) %>% 
+  ggplot(aes(x = year, y = doses))+
+  geom_col()
+
+demand_all %>% 
+  group_by(year) %>% 
+  summarize(doses = sum(demand_MR_all, na.rm = TRUE)) %>% 
+  ggplot(aes(x = year, y = doses))+
+  geom_col()
