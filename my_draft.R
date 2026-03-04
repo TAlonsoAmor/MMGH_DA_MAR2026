@@ -154,3 +154,57 @@ demand_SIA <- freq_SIA %>%
     )
   ) %>% 
   mutate(demand = sia_indicator*pop_SIA*sia_wastage_multiplier)
+
+
+### join everything
+demand_mr_all <- rutine_MR %>%
+  dplyr::group_by(ISO, Country, WHO, `WB Group (June 2020)`, `MR MAP Group`, year) %>% 
+  dplyr::summarize(pdr_rutine = sum(demand_total)) %>% 
+  left_join(demand_SIA) %>% 
+  mutate(demand_rutine_SIA = demand + pdr_rutine)
+
+# STEP 2 ------------------------------------------------------------------
+# I'm gonna use the Overview sheet for this
+# Archetypes: Group A -> 1; group B -> 2; Group C -> 3; Group 4 -> 4. 
+# 16 Key countrties, those marked with key.
+# Assumption of remaping of key countries into archetypes
+# AFRO: DRC, Ethiopia, Mozambique, Nigeria, Chad, Tanzania, Uganda, South Africa → Group 3
+# EMRO: Afghanistan, Pakistan → Group 3
+# SEARO: Bangladesh, India, Indonesia → Group 4
+# WPRO: Philippines → Group 4
+# PAHO: Brazil → Group 2 (uses MMR/MMRV but may use MR for SIAs)
+# PAHO: USA → Group 1 (exclusively MMR/MMRV)
+
+
+mr_map_startYear <- dataAll$`1. Overview` %>% 
+  select(Country, WHO, `MR MAP Group`, `Scenario 1: Base`) %>% 
+  rename(MAP_start_year = `Scenario 1: Base`)
+
+# add market penetration multiplier
+mr_map_market <- mr_map_startYear %>% 
+  # add new group keys to consider the 16 key countries
+  mutate(MR_MAP_Group_New = case_when(`MR MAP Group` != "Key" ~ `MR MAP Group`,
+                                      # ASSUMPTION: key countries assigned to nearest archetype by WHO region
+                                      WHO %in% c("AFRO", "EMRO")  ~ "3",  # MR/M countries in Africa & Eastern Med
+                                      WHO %in% c("SEARO", "WPRO") ~ "4",  # MR/M countries in SE Asia & Western Pacific
+                                      WHO == "PAHO" & Country == "United States of America" ~ "1",  # exclusively MMR/MMRV
+                                      WHO == "PAHO"               ~ "2",  # Brazil: MMR/MMRV routine but MR for SIAs,
+                                      TRUE ~ NA_character_
+                                      )) %>% 
+  mutate(MR_MAP_Group_New = as.numeric(MR_MAP_Group_New)) %>% 
+  mutate(market_multiplier = case_when(MR_MAP_Group_New == 1 ~ 0.05, # Group A: MMR/MMRV countries, MAPs only for special populations
+                                       MR_MAP_Group_New == 2 ~ 0.3,  # Group B: historical MR N/S share in MMR/MMRV countries
+                                       MR_MAP_Group_New == 3 ~ 0.8, # Group C: AFRO/EMRO MR countries, unlikely to switch fully to MAPs
+                                       MR_MAP_Group_New == 4 ~ 0.8, # Group D: SEARO/WPRO MR countries, same logic as Group C
+                                       TRUE ~ 0))
+
+# the PDR for MAP
+mr_map_demand_setp2 <- demand_mr_all %>% 
+  left_join(mr_map_market) %>% 
+  # create flag of MAP, according to starting year
+  group_by(ISO, Country) %>% 
+  mutate(MR_Flag = ifelse(year>= MAP_start_year, TRUE, FALSE)) %>% 
+  mutate(MR_PDR_step2 = ifelse(MR_Flag, demand_rutine_SIA*market_multiplier, 0))
+
+# Total number of PDR for MAP
+sum(mr_map_demand_setp2$MR_PDR_step2)
