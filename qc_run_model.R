@@ -156,9 +156,9 @@ demand_SIA <- freq_SIA %>%
   # convert rutine wastage to SIA wastage
   mutate(
     sia_wastage_multiplier = case_when(
-      wastage == 1.666667 ~ 1.111,   # 10-dose vial
-      wastage == 1.176471 ~ 1.111,   # 5-dose vial
-      wastage == 1.050000 ~ 1.010,   # 1-dose vial
+      round(wastage, 2) == 1.67 ~ 1.111,   # 10-dose vial
+      round(wastage, 2) == 1.18 ~ 1.111,   # 5-dose vial
+      round(wastage, 2) == 1.05 ~ 1.010,   # 1-dose vial
       TRUE                           ~ 0
     )
   ) %>% 
@@ -171,6 +171,9 @@ demand_mr_all <- rutine_MR %>%
   dplyr::summarize(pdr_rutine = sum(demand_total)) %>% 
   left_join(demand_SIA) %>% 
   mutate(demand_rutine_SIA = demand + pdr_rutine)
+
+## demand all
+sum(demand_mr_all$demand_rutine_SIA)
 
 # STEP 2 ------------------------------------------------------------------
 # I'm gonna use the Overview sheet for this
