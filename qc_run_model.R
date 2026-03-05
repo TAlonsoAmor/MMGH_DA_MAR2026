@@ -173,7 +173,8 @@ demand_mr_all <- rutine_MR %>%
   mutate(demand_rutine_SIA = demand + pdr_rutine)
 
 ## demand all
-sum(demand_mr_all$demand_rutine_SIA)
+print("STEP 1 TOTAL:")
+print(sum(demand_mr_all$demand_rutine_SIA))
 
 # STEP 2 ------------------------------------------------------------------
 # I'm gonna use the Overview sheet for this
@@ -219,7 +220,8 @@ mr_map_demand_setp2 <- demand_mr_all %>%
   mutate(MR_PDR_step2 = ifelse(MR_Flag, demand_rutine_SIA*market_multiplier, 0))
 
 # Total number of PDR for MAP
-sum(mr_map_demand_setp2$MR_PDR_step2)
+print("STEP 2 TOTAL:")
+print(sum(mr_map_demand_setp2$MR_PDR_step2))
 
 
 # STEP 3 ------------------------------------------------------------------
@@ -284,7 +286,8 @@ add_mr_map_mov <- target_pop_mov %>%
   mutate(mr_map_mov_u2 = mr_map_mov_pre_buffer_u2+buffer)
 
 # Total MOV doses
-sum(add_mr_map_mov$mr_map_mov_2_15, na.rm = TRUE) + sum(add_mr_map_mov$mr_map_mov_u2, na.rm = TRUE)
+print("STEP 3 TOTAL:")
+print(sum(add_mr_map_mov$mr_map_mov_2_15, na.rm = TRUE) + sum(add_mr_map_mov$mr_map_mov_u2, na.rm = TRUE))
 
 
 # PLOTS -------------------------------------------------------------------
