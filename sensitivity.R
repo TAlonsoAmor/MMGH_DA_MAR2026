@@ -63,7 +63,7 @@ plot_sensitivity <- function(sensitivity_results) {
       title    = "Sensitivity Analysis: Group C/D Market Penetration Rate",
       subtitle = "±20% variation in MAP market penetration for AFRO/EMRO/SEARO/WPRO countries",
       x        = "Scenario",
-      y        = "Total MR-MAP PDR 2030–2040 (billions)",
+      y        = "Global MR-MAP PDR 2030–2040 (step 2, billions)",
       caption  = "Base assumption: 80% market penetration (Ko et al. 2023)\nVariation method: ±20% as per paper sensitivity analysis methodology"
     ) +
     theme_minimal() +

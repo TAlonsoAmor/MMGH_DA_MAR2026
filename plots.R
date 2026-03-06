@@ -9,13 +9,13 @@ plot_ns_vs_map <- function(demand_all) {
     group_by(year) |>
     summarise(
       `Needle & Syringe` = sum(demand_rutine_SIA - MR_PDR_step2, na.rm = TRUE),
-      `Microarray Patch`  = sum(demand_MR_all,                    na.rm = TRUE),
+      `Microarray Patch`  = sum(demand_MR_MAP_all,                    na.rm = TRUE),
       .groups = "drop"
     ) |>
     pivot_longer(cols = c(`Needle & Syringe`, `Microarray Patch`),
                  names_to = "presentation", values_to = "doses")
   
-  ggplot(plot_data, aes(x = factor(year), y = doses / 1e6, fill = presentation)) +
+  ggplot(plot_data, aes(x = factor(year), y = doses / 1e6, fill = factor(presentation, levels = c("Needle & Syringe", "Microarray Patch")))) +
     geom_col() +
     geom_text(aes(label = round(doses / 1e6)),
               position = position_stack(vjust = 0.5), size = 3) +
@@ -28,7 +28,8 @@ plot_ns_vs_map <- function(demand_all) {
       subtitle = "Split by vaccine presentation (Scenario 1: Base)",
       x        = "Year",
       y        = "Millions of doses",
-      fill     = ""
+      fill     = "",
+      caption = "Assumption: All deliveries through SIA start in 2030."
     ) +
     theme_minimal() +
     theme(legend.position = "bottom")
@@ -43,7 +44,7 @@ plot_country_archetype <- function(demand_all,
   demand_all |>
     filter(ISO %in% selected_iso) |>
     group_by(ISO, Country, year) |>
-    summarise(doses = sum(demand_MR_all, na.rm = TRUE), .groups = "drop") |>
+    summarise(doses = sum(demand_MR_MAP_all, na.rm = TRUE), .groups = "drop") |>
     ggplot(aes(x = year, y = doses / 1e6, colour = Country)) +
     geom_line(linewidth = 1) +
     geom_point() +
@@ -61,7 +62,7 @@ plot_country_archetype <- function(demand_all,
 plot_pdr_by_group <- function(demand_all) {
   demand_all |>
     group_by(`MR MAP Group`, year) |>
-    summarise(doses = sum(demand_MR_all, na.rm = TRUE), .groups = "drop") |>
+    summarise(doses = sum(demand_MR_MAP_all, na.rm = TRUE), .groups = "drop") |>
     mutate(
       group_label = case_when(
         `MR MAP Group` == "Key" ~ "16 Key Countries",

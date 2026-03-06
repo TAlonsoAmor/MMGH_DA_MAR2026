@@ -103,7 +103,7 @@ run_pipeline <- function(annex_path = ANNEX_PATH) {
       STEP3 |> select(ISO, Country, `MR MAP Group`, year, mr_map_mov_u2, mr_map_mov_2_15),
       by = c("ISO", "Country", "MR MAP Group", "year")
     ) |>
-    mutate(demand_MR_all = MR_PDR_step2 + mr_map_mov_u2 + mr_map_mov_2_15)
+    mutate(demand_MR_MAP_all = MR_PDR_step2 + mr_map_mov_u2 + mr_map_mov_2_15)
   
   # ── Sensitivity analysis ────────────────────────────────────────────────────
   message("Running sensitivity analysis...")
@@ -112,10 +112,9 @@ run_pipeline <- function(annex_path = ANNEX_PATH) {
   # ── Plots ───────────────────────────────────────────────────────────────────
   message("Generating plots...")
   P1 <- plot_ns_vs_map(DEMAND_ALL)
-  P2 <- plot_country_archetype(DEMAND_ALL)
-  P3 <- plot_sensitivity(SENSITIVITY)
-  P4 <- plot_pdr_by_group(DEMAND_ALL)
-  P5 <- plot_sia_coverage(STEP1$sia_mr, selected_iso = c("NGA", "BRA", "IND", "ETH"))
+  P2 <- plot_sensitivity(SENSITIVITY)
+  P3 <- plot_pdr_by_group(DEMAND_ALL)
+  P4 <- plot_sia_coverage(STEP1$sia_mr, selected_iso = c("NGA", "BRA", "IND", "ETH"))
   
   return(list(
     data        = DATA,
@@ -125,16 +124,11 @@ run_pipeline <- function(annex_path = ANNEX_PATH) {
     demand_all  = DEMAND_ALL,
     sensitivity = SENSITIVITY,
     plots       = list(ns_vs_map   = P1,
-                       by_country  = P2,
-                       sensitivity = P3,
-                       by_country_global = P4,
-                       sia_freq = P5)
+                       sensitivity = P2,
+                       by_country_global = P3,
+                       sia_freq = P4)
   ))
 }
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 RESULTS <- run_pipeline()
-# RESULTS$plots$ns_vs_map
-# RESULTS$plots$by_country
-# RESULTS$plots$sensitivity
-# RESULTS$sensitivity
