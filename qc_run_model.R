@@ -279,7 +279,7 @@ add_mr_map_mov <- target_pop_mov %>%
   #add SIA schedule for 2_15
   left_join(freq_SIA) %>% 
   mutate(mr_map_mov_pre_buffer_u2 = mov_u2_pop*2*coverage_u2*1.010,
-         mr_map_mov_2_15 = mov_2_15_pop*2*coverage_2_15*1.010*sia_indicator) %>% 
+         mr_map_mov_2_15 = ifelse(as.numeric(`intro date`<= year), mov_2_15_pop*2*coverage_2_15*1.010*sia_indicator, 0)) %>% 
   dplyr::group_by(ISO, Country) %>% 
   mutate(buffer = case_when(mr_map_mov_pre_buffer_u2 - lag(mr_map_mov_pre_buffer_u2) > 0 ~ 0.25*(mr_map_mov_pre_buffer_u2 - lag(mr_map_mov_pre_buffer_u2)),
                             TRUE ~ 0)) %>% 

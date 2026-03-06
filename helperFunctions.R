@@ -49,11 +49,21 @@ load_annex <- function(path,
                        col_names = TRUE, .name_repair = "unique") |>
         filter(if_any(everything(), ~ !is.na(.)))
       
+      # Drop year columns outside the forecast period (e.g. 2014, 2019, 2025)
+      df <- df |>
+        select(-any_of(
+          setdiff(
+            grep("^[0-9]{4}$", names(df), value = TRUE),  # all 4-digit year cols
+            FORECAST_YEARS                                  # keep only 2030-2040
+          )
+        ))
+      
       # Apply ISO corrections where applicable
       if (all(c("Country", "ISO") %in% names(df))) {
         df <- df |>
           rows_update(ISO_CORRECTIONS, by = "Country", unmatched = "ignore")
       }
+      
       df
     }
   )

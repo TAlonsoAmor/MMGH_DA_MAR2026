@@ -288,20 +288,31 @@ calculate_step3 <- function(sheet_sec_comp,
     )
   
   # ── C: Calculate doses ─────────────────────────────────────────────────────
-  # U2:   2 doses routine, gated by sheet 4c (already 0 before MAP adoption)
-  # 2-15: 2 doses SIA, gated by MAP adoption year AND SIA indicator
+  # U2:   2 doses routine
+  #       gated by coverage_u2 (sheet 4c already encodes 0 before MAP adoption)
+  # 2-15: 2 doses SIA
+  #       gated by sia_indicator AND MAP_start_year
+  #       (coverage_2_15 in sheet 4d does NOT encode adoption year)
   add_mr_map_mov <- target_pop_mov |>
-    left_join(map_adoption |> select(Country, MAP_start_year), by = "Country") |>
-    left_join(sia_schedule |> select(ISO, year, sia_indicator), by = c("ISO", "year")) |>
+    left_join(
+      map_adoption |> select(Country, MAP_start_year),
+      by = "Country"
+    ) |>
+    left_join(
+      sia_schedule |> select(ISO, year, sia_indicator) |> distinct(ISO, year, .keep_all = TRUE),
+      by = c("ISO", "year")
+    ) |>
     mutate(
-      mr_map_mov_pre_buffer_u2 = htr_u2_pop   * 2 * coverage_u2   * 1.010,
-      mr_map_mov_2_15          = htr_2_15_pop * 2 * coverage_2_15 * 1.010 * sia_indicator
-      
+      mr_map_mov_pre_buffer_u2 = htr_u2_pop * 2 * coverage_u2 * 1.010,
+      mr_map_mov_2_15          = if_else(
+        sia_indicator == 1 & year >= MAP_start_year,
+        htr_2_15_pop * 2 * coverage_2_15 * 1.010,
+        0
+      )
     ) |>
     group_by(ISO, Country) |>
     arrange(year) |>
     mutate(
-      # Buffer on U2 routine only
       buffer        = case_when(
         mr_map_mov_pre_buffer_u2 - lag(mr_map_mov_pre_buffer_u2) > 0 ~
           0.25 * (mr_map_mov_pre_buffer_u2 - lag(mr_map_mov_pre_buffer_u2)),
