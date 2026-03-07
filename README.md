@@ -120,8 +120,8 @@ All plots and tables are also saved to `./outputs/` when `save_outputs = TRUE`.
 
 ## Data Sources
 
-| Data | Source | File |
-|------|--------|------|
+| Data | File |
+|------|------|
 | Population projections (surviving infants, U5, age groups) | sheets 2a–2g |
 | Population projections percentage (U2, 2-15) | sheets 2d-2f |
 | MCV1/MCV2 coverage forecasts | sheets 4a–4b |
@@ -146,7 +146,7 @@ All data is sourced from `Supplemental_Annex.xlsx`, the spreadsheet shared throu
 | Market penetration Group A | 5% | Ko et al. (2023) Step 2 |
 | Market penetration Group B | 30% | Ko et al. (2023) Step 2 |
 | Market penetration Groups C/D | 80% | Ko et al. (2023) Step 2 |
-| Key country archetype mapping | By WHO region | No individual data available; see code |
+| Key country archetype mapping | By WHO region + Income level for US and Brazil | No individual data available; see code |
 | SIA start year | 2030 (all countries) | Historical SIA dates unavailable; see Known Limitations |
 
 ---
