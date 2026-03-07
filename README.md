@@ -75,7 +75,7 @@ management. It was developed under **R 4.5.2** on Ubuntu 24.04 LTS.
 
 1. Place `Supplemental_Annex.xlsx` in the `./data/` folder
 2. Open `run_model.R` in RStudio
-3. Run the full script or call:
+3. Run the full script (source) or call (once all libraries and internal functions have been loaded/run):
 
 ```r
 RESULTS <- run_pipeline(save_outputs = TRUE, output_dir = "./outputs")
