@@ -3,12 +3,7 @@
 # =============================================================================
 
 #' Sensitivity analysis: vary Group C/D market penetration rate ±20%
-#' (Source: Ko et al. 2023 – paper applies ±20% to key uncertain variables)
-#'
-#' Group C/D penetration (0.80) is the most impactful assumption:
-#'   - Covers the majority of global MAP demand (AFRO/EMRO/SEARO/WPRO countries)
-#'   - Explicitly flagged as assumption-based in the paper
-#'   - No empirical market research was available at time of publication
+#' This is marked on the paper as an assumption based on expert opinion
 run_sensitivity_analysis <- function(step1_combined, sheet_overview) {
   
   scenarios <- list(

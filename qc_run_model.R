@@ -290,23 +290,3 @@ print("STEP 3 TOTAL:")
 print(sum(add_mr_map_mov$mr_map_mov_2_15, na.rm = TRUE) + sum(add_mr_map_mov$mr_map_mov_u2, na.rm = TRUE))
 
 
-# PLOTS -------------------------------------------------------------------
-demand_all <- demand_mr_all %>% 
-  select(ISO, Country, `MR MAP Group`, year, demand_rutine_SIA) %>% 
-  left_join(mr_map_demand_setp2  %>% select(ISO, Country, `MR MAP Group`, year, MR_PDR_step2)) %>% 
-  left_join(add_mr_map_mov %>% select(ISO, Country, `MR MAP Group`, year,mr_map_mov_2_15, mr_map_mov_u2)) %>% 
-  mutate(demand_MR_all = MR_PDR_step2 + mr_map_mov_2_15 + mr_map_mov_u2)
-
-
-# plot, all MR
-demand_all %>% 
-  group_by(year) %>% 
-  summarize(doses = sum(demand_rutine_SIA)) %>% 
-  ggplot(aes(x = year, y = doses))+
-  geom_col()
-
-demand_all %>% 
-  group_by(year) %>% 
-  summarize(doses = sum(demand_MR_all, na.rm = TRUE)) %>% 
-  ggplot(aes(x = year, y = doses))+
-  geom_col()
