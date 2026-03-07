@@ -31,6 +31,7 @@ Steps 1–3 of the published methodology.
 ├── run_model.R                      # Main entry point — run this
 └── renv.lock                        # Package versions (managed by renv)
 ```
+The code `qc_run_model.R` was kept to show the initial development version of these codes.
 
 ---
 
@@ -177,7 +178,7 @@ All data is sourced from `Supplemental_Annex.xlsx`, the spreadsheet shared throu
 | Step 3: HTR/MOV PDR (2030–2040) | ~0.25b doses | ~0.25b doses | 100% |
 
 Differences are primarily attributable to the known limitations described above,
-in particular the SIA scheduling assumption.
+in particular the SIA scheduling assumption and the allocation to groups A-D of the key countries.
 
 ---
 
